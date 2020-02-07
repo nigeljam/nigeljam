@@ -1,0 +1,219 @@
+import arcpy
+arcpy.env.overwriteOutput = True
+arcpy.env.workspace = r"D:\428-GIS\lab2_428\lab2\lab2.gdb"
+
+#make layers
+arcpy.MakeFeatureLayer_management(r"D:\428-GIS\lab2_428\lab2\lab2.gdb\Neighbourhood_Boundaries")
+arcpy.MakeFeatureLayer_management(r"D:\428-GIS\lab2_428\lab2\lab2.gdb\Victoria_Crime")
+arcpy.MakeFeatureLayer_management(r"D:\428-GIS\lab2_428\lab2\lab2.gdb\Schools")
+arcpy.MakeFeatureLayer_management(r"D:\428-GIS\lab2_428\lab2\lab2.gdb\Parks_Victoria")
+print ("Done Importing Layers")
+#(Question 1)
+
+arcpy.analysis.Clip('Victoria_Crime', 'Parks_Victoria','crime_in_park')
+Q1_Out = arcpy.management.GetCount('crime_in_park')
+# I made way to many copyfeatures of "crime_in_park" you live and you learn
+arcpy.management.CopyFeatures('crime_in_park')
+print ("Question 1 Answer: "+ str(Q1_Out))
+
+
+
+#Question 2
+# SELECT neighbourhood Parameters
+whereExpr3 = "Neighbourh = 'Oaklands' Or Neighbourh = 'Fernwood' Or Neighbourh = 'North Jubilee' Or Neighbourh = 'South Jubilee'"
+Select_neigh = arcpy.management.SelectLayerByAttribute('Neighbourhood_Boundaries', 'NEW_SELECTION',whereExpr3)
+print ("Neighbourhoods Selected, Nice Work Nigel!")
+
+#Intersect parks and neighbourhoods
+
+parks_neigh = arcpy.analysis.Intersect(['Parks_Victoria', Select_neigh], 'parks_w_neigh')
+print("Intigration Complete")
+
+#buffer parks
+buffer500 = "500 Meters"
+buffer_parks_500 = arcpy.analysis.Buffer(parks_neigh,'parks_neigh_Buffer_500m', buffer500, "FULL", "ROUND", "ALL", None, "PLANAR")
+print("You did it Nigel, you did a buffer in python!")
+
+
+
+# Select crimes
+
+crimeYear = 2016
+crimeType = "Property Crime"
+whereExprQ2 = "incident_d LIKE '%%%s%%'"% crimeYear + " And parent_inc = '%s'"% crimeType
+
+print("Q2 Variables in")
+
+crimeselect = arcpy.management.SelectLayerByAttribute('Victoria_Crime', "NEW_SELECTION",whereExprQ2)
+print ("Query for Crime Done, Good work!")
+
+#Intersect crimes with parks
+arcpy.analysis.Intersect([crimeselect, buffer_parks_500], 'crimes_500m_of_parks')
+print("Property Crimes and Parks Connected")
+
+Q2_Out = arcpy.management.GetCount("crimes_500m_of_parks")
+print (" Question 2 Answer: " + str(Q2_Out))
+
+
+
+#Question 3
+
+#Select Crimes question 3
+# By Seperating crimeType in an array we can store the 3 different crimes in each position
+
+crimeYear = 2017
+crimeType = ["Liquor", "Drugs", "Disorder"]
+whereexprQ3 = "incident_d LIKE '%%%s%%'"% crimeYear + " And (parent_inc = '%s'"%crimeType[0] + " Or parent_inc = '%s'"%crimeType[1] + " Or parent_inc = '%s'"%crimeType[2] + ")"
+crimeselection = arcpy.management.SelectLayerByAttribute('Victoria_Crime', "NEW_SELECTION",whereexprQ3)
+print("Crimes specific to question 3 selected")
+
+#Select Neighbourhoods question 3
+
+whereexpr4 = "Neighbourh <> 'Victoria West'"
+neighselect = arcpy.management.SelectLayerByAttribute("Neighbourhood_Boundaries", "NEW_SELECTION",whereexpr4)
+print("Neighbourhoods selected")
+
+#Intersect Schools and Neighbourhoods
+
+schoolsQ3 = arcpy.analysis.Intersect(["Schools", neighselect], 'q3_neigh_schools')
+print("schools intersected to neighbourhoods, good stuff nigel!")
+
+#Buffer Schools
+
+buffersize = "500 Meters"
+schoolbuffer = arcpy.analysis.Buffer(schoolsQ3,'bufferq3', buffersize, "FULL", "ROUND", "ALL", None, "PLANAR")
+print("School Buffer Complete, Your almost there nigel!!!!!!!!!!!")
+
+#Intersect School Buffer and Crime Selection
+
+arcpy.analysis.Intersect([crimeselection, schoolbuffer], 'schools_crimes_500')
+print("Intersect Schools Buffer and Crime, NOW ALL YOU NEED IS THE COUNT!")
+
+#Get Count of Crimes
+
+Q3_Out = arcpy.management.GetCount('schools_crimes_500')
+print (" Question 3 Answer: " + str (Q3_Out))
+
+
+#Question 4
+
+#2017 Property Crimes
+
+crimeYear = 2017
+crimeType = "Property Crime"
+whereexprQ4 = "incident_d LIKE '%%%s%%'"% crimeYear + " And parent_inc = '%s'"% crimeType
+crimeselectionQ4 = arcpy.management.SelectLayerByAttribute('Victoria_Crime', "NEW_SELECTION",whereexprQ4)
+print("2017 Property Crime selected")
+
+#Buffer 100m
+# using the variable seen in question 2 for that efficent life
+buffersize = "100 Meters"
+parksbufferQ4 = arcpy.analysis.Buffer(parks_neigh,'parksQ4_100m', buffersize, "FULL", "ROUND", "ALL", None, "PLANAR")
+print("Lets go Question 4 Buffer finished")
+
+
+#Intersect property crimes with parks
+arcpy.analysis.Intersect([crimeselectionQ4, parksbufferQ4], 'crimes_100m_of_parks')
+print("Intersect property crimes w/ parks")
+
+
+
+#Get Count
+Q4_Out = arcpy.management.GetCount("crimes_100m_of_parks")
+
+print ("Question 4 Answer: " + str(Q4_Out))
+
+
+
+#Question 5
+
+#Selecting Crimes again!
+
+crimeYear = 2015
+crimeType = ["Liquor", "Drugs", "Disorder"]
+whereexprQ5 = "incident_d LIKE '%%%s%%'"% crimeYear + " And (parent_inc = '%s'"%crimeType[0] + " Or parent_inc = '%s'"%crimeType[1] + " Or parent_inc = '%s'"%crimeType[2] + ")"
+crimeselectionQ5 = arcpy.management.SelectLayerByAttribute('Victoria_Crime', "NEW_SELECTION",whereexprQ5)
+print("Crimes in Q5 Selected")
+
+#Select Neighbourhoods in question 5
+whereexpr5 = "Neighbourh <> 'Victoria West'"
+neighselectionQ5 = arcpy.management.SelectLayerByAttribute("Neighbourhood_Boundaries", "NEW_SELECTION",whereexpr5)
+print("Neighbourhoods selected for question 5")
+
+#Intersect Schools and Neighbourhoods
+schoolsQ5 = arcpy.analysis.Intersect(["Schools", neighselectionQ5], 'schools_in_neigbourQ5')
+print("Intersect between Schools/Neighbourhoods Q5")
+
+#Buffer Schools 100
+buffersizeQ5 = "100 Meters"
+schoolsbufferQ5 = arcpy.analysis.Buffer(schoolsQ5,'schoolsQ5_100m', buffersizeQ5, "FULL", "ROUND", "ALL", None, "PLANAR")
+print("Buffer Schools Done for Question 5")
+
+#Intersect School Buffer and Crime Selection
+arcpy.analysis.Intersect([crimeselectionQ5, schoolsbufferQ5], 'crimes_100m_schools')
+print("schools connected to crime with a buffer for question 5")
+
+#Get Count of Crimes
+Q5_Out = arcpy.management.GetCount('crimes_100m_schools')
+print ("Question 5 Answers: " + str(Q5_Out))
+
+
+
+#Question 6 the sketchy LOOOOOOOOOOOOOP
+# First define the indivisual Varables so I dont plug in all of the crimes and days everytime
+crimetypes = ['Robbery', 'Assault', 'Property Crime', 'Theft', 'Theft from Vehicle']
+days = ['Monday','Tuesday','Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+crimefinish = {}
+
+for crime in crimetypes:
+    #Creating a new Array/list for the for loop
+    newlist = []
+    for day in days:
+    
+        #Select Crimes by day and crime important step to get specific info we want
+        whereexprQ6 = "day_of_wee = '%s'"% day + " And parent_inc = '%s'"% crime
+        selection = arcpy.management.SelectLayerByAttribute("Victoria_Crime", "NEW_SELECTION", whereexprQ6)
+        
+        #Get Count
+        count = arcpy.management.GetCount(selection)
+
+
+        count = int(count[0])
+        
+        newlist.append(count)
+
+    print (" Following sample code online this seems to be correct, esri help files are awesome!")
+    #Get Maximum Value in List, important for this question
+    maxThing = max(newlist)
+    maxcata = newlist.index(maxThing)
+
+    #Add crime and day/value to dictionary
+    if maxcata == 0:
+        crimefinish[crime] = ["Monday", maxThing]
+    elif maxcata == 1:
+        crimefinish[crime] = ["Tuesday", maxThing]
+    elif maxcata == 2:
+        crimefinish[crime] = ["Wednesday", maxThing]
+    elif maxcata == 3:
+        crimefinish[crime] = ["Thursday", maxThing]
+    elif maxcata == 4:
+        crimefinish[crime] = ["Friday", maxThing]
+    elif maxcata == 5:
+        crimefinish[crime] = ["Saturday", maxThing]
+    elif maxcata == 6:
+        crimefinish[crime] = ["Sunday", maxThing]
+
+        
+# Print the array of the outputted results
+
+print(crimefinish)
+
+print (" ----------------- All Answers for Lab ----------------------")
+print ("Question 1 Answer: "+ str(Q1_Out))
+print ("Question 2 Answer: " + str(Q2_Out))
+print ("Question 3 Answer: " + str (Q3_Out))
+print ("Question 4 Answer: " + str(Q4_Out))
+print ("Question 5 Answers: " + str(Q5_Out))
+print(crimefinish)
+
+
