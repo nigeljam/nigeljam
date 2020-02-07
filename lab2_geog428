@@ -187,7 +187,7 @@ for crime in crimetypes:
     maxThing = max(newlist)
     maxcata = newlist.index(maxThing)
 
-    #Add crime and day/value to dictionary
+
     if maxcata == 0:
         crimefinish[crime] = ["Monday", maxThing]
     elif maxcata == 1:
