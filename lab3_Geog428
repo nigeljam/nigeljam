@@ -1,0 +1,185 @@
+import arcpy
+
+arcpy.env.overwriteOutput = True
+
+arcpy.management.CreateFileGDB(r"D:\428-GIS\lab3_428\lab3","lab3_gdb")
+
+
+# Set Workspace to Geodatabase
+arcpy.env.workspace = r"D:\428-GIS\lab3_428\data\lab3_gdb.gdb"
+
+
+#Import the Data needed for the project
+arcpy.MakeFeatureLayer_management(r"D:\428-GIS\lab3_428\data\HOSPITALS_point.shp")
+arcpy.MakeFeatureLayer_management(r"D:\428-GIS\lab3_428\data\POP_PL_1M_point.shp")
+
+
+# Define variables
+city = "Alpine Meadows"
+hospitals =r"D:\428-GIS\lab3_428\data\HOSPITALS_point.shp"
+popPlaces =r"D:\428-GIS\lab3_428\data\POP_PL_1M_point.shp"
+popCollect = "EST_POP"
+cityNames = "NAME"
+
+
+# Task 4 Using a Search Cursor, calculate the average population of all populated places. 
+
+#Creating variables for cursor
+
+totalPopulation = 0
+recordsCounted = 0
+average = 0
+
+# Create cursor for counting instances of found data average population
+
+with arcpy.da.SearchCursor(popPlaces,(popCollect)) as cursor:
+ for row in cursor:
+  totalPopulation += row[0]
+  recordsCounted += 1
+
+average = totalPopulation / recordsCounted
+
+#Print the String
+
+print ("The Average Population of all Populated places in bc is: " +str(average))
+print ("Nice Work Nigel your a coding wizard")
+
+
+#Task 5 Determine the population size of your assigned city, and the distance of this city to the nearest hospital
+
+#Running Near tool to determine distance field
+arcpy.analysis.Near(popPlaces,hospitals)
+
+nearHospital = "NEAR_DIST"
+
+#Where statement for the nearest hospital in correlation to my city of alpine meadows
+
+City_where_exp= cityNames+" ='"+city+"'"
+
+print (City_where_exp)
+
+#Calculating population of Alpine Meadows as well as other statistics creating variables
+
+tot_pop_t5 = 0
+count_t5 = 0
+miniPop = 0
+maxiPop = 0
+
+with arcpy.da.SearchCursor(popPlaces,(popCollect),City_where_exp) as cursor:
+ for row in cursor:
+  tot_pop_t5 += row[0]
+  count_t5 += 1
+  alpinePop = tot_pop_t5
+  miniPop = .9 * tot_pop_t5
+  maxiPop = tot_pop_t5 + .10 * tot_pop_t5
+  
+print("Great work nigel almost done t5")
+#print total population
+print ("Population found at Alpine Meadows is " + str(alpinePop))
+#print the miniumum Population
+print ("Minimum Population at Alpine Meadows is " + str(miniPop))
+#print the maximum Population
+print ("Maximum Population at Alpine Meadows is " + str(maxiPop))
+
+#determine hospital variables to start count
+nearhosptial_t5 = 0
+count_t5_2 = 0
+nearhosptial2_t5 = 0
+
+#nearest Distance to Hosptial 
+
+with arcpy.da.SearchCursor(popPlaces,(nearHospital),City_where_exp) as cursor:
+ for row in cursor:
+  nearhosptial_t5 += row[0]
+  count_t5_2 += 1
+  
+#print statment for close hospital
+print ("The closest hosptial in metres is " + str(nearhosptial_t5))
+
+
+#Task 6 Calculate the average distance to hospitals for cities +/- 10% of your assigned city.
+print("dont give up brother nigel, your almost done")
+
+#Select cities +/- 10% below and above
+
+cities = 0
+cityNumbers = 0
+distanceGathered = 0
+
+pop_where_exp = (popCollect +" >=" + str(miniPop) + " AND "+ popCollect + " <=" +str(maxiPop))
+
+with arcpy.da.SearchCursor(popPlaces, (nearHospital), pop_where_exp) as cursor:
+  for row in cursor:
+   cityNumbers += 1                        
+   distanceGathered += row[0]
+averageDistance = distanceGathered/cityNumbers
+                           
+print ("Amount of Cities that are +/- 10% below and above the Alpine Meadows population is " + str(cityNumbers)
++ "where the Total Distance of close by hospitals is = " +str(averageDistance))
+       
+
+#Task 7 Provide a qualitative classification of distance to hospitals for different size cities.
+
+# Create new Fields into the popPlaces table
+
+arcpy.AddField_management(popPlaces, "Small_C", "TEXT")
+arcpy.AddField_management(popPlaces, "Medium_C", "TEXT")
+arcpy.AddField_management(popPlaces, "Large_C", "TEXT")
+
+#Assign Variables for task 7
+
+smallCities = "Small_C"
+smallPopulation = (popCollect + "<= 500")
+
+mediumCities = "Medium_C"
+mediumPopulation = (popCollect +"> 500" + " AND " + popCollect + "<=10000")
+
+largeCities = "Large_C"
+largePopulation = (popCollect +">10000")
+
+#Calculate Small Cities
+
+with arcpy.da.UpdateCursor(popPlaces,(nearHospital,smallCities), smallPopulation) as cursor:
+ for row in cursor:
+  if row[0] <= 1000:
+   row[1] = "VERY CLOSE"
+  elif row[0] > 1000 and row[0] < 10000:
+   row[1] = 'CLOSE'
+  else:
+   row[1] = 'FAR'
+  cursor.updateRow(row)
+  
+print("done small cities")
+#Calculate Medium Cities
+
+with arcpy.da.UpdateCursor(popPlaces,(nearHospital,mediumCities), mediumPopulation) as cursor:
+ for row in cursor:
+  if row[0] <= 1000:
+   row[1] = "VERY CLOSE"
+  elif row[0] > 1000 and row[0] < 10000:
+   row[1] = 'CLOSE'
+  else:
+   row[1] = 'FAR'
+  cursor.updateRow(row)
+  
+print("done medium cities")
+#Calculate Large Cities
+
+with arcpy.da.UpdateCursor(popPlaces,(nearHospital,largeCities), largePopulation) as cursor:
+ for row in cursor:
+  if row[0] <= 1000:
+   row[1] = "VERY CLOSE"
+  elif row[0] > 1000 and row[0] < 10000:
+   row[1] = 'CLOSE'
+  else:
+   row[1] = 'FAR'
+  cursor.updateRow(row)
+  
+print("done large cities")
+# Arcpy to excel conversion
+
+
+arcpy.TableToExcel_conversion(popPlaces, r"D:\428-GIS\lab3_428\finalresultsgraph.xlsx")
+
+print("YOUR DONE you MADE IT OMG, HERE Is YOUR TABLE FOR MAKING A GRAPH")
+
